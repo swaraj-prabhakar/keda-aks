@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: message-consumer
+  namespace: keda-test
+  labels:
+    app: message-consumer
+spec:
+  selector:
+    matchLabels:
+      app: message-consumer
+  template:
+    metadata:
+      labels:
+        app: message-consumer
+    spec:
+      containers:
+      - name: message-consumer
+        image: acrtest.azurecr.io/consumer:latest
+        imagePullPolicy: Always
+        #resources:
+        #  limits:
+        #    memory: "128Mi"
+        #    cpu: "100m"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: message-consumer
+  namespace: keda-test
+  labels:
+    deploymentName: message-consumer
+spec:
+  scaleTargetRef:
+    name: message-consumer
+  pollingInterval: 5
+  cooldownPeriod: 10
+  minReplicaCount: 0
+  maxReplicaCount: 20
+  triggers:
+  - type: rabbitmq
+    metadata:
+      queueName: message.queue
+      host: 'amqp://user:Pass123@rabbitmq.keda-test.svc.cluster.local:5672'
+      queueLength: '5'
+      rabbitmqExchange: ""
+      rabbitmqExchangeType: ""
+      rabbitmqRoutingKey: ""
+      rabbitmqPrefetchCount: "1"
+  #- type: cpu
+  #  metadata:
+  #    type: Utilization
+  #    value: "80"
+  #- type: memory
+  #  metadata:
+  #    type: Utilization
+  #    value: "80"
+---
